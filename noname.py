@@ -1,5 +1,6 @@
 #%% Constants, imports, environment
 
+from _typeshed import OpenTextModeReading
 import argparse
 import json
 import os
@@ -22,11 +23,6 @@ from ct_utils import truncate_float
 import numpy as np
 import glob
 
-
-# flasd = open('progres.txt', 'w')
-
-
-# f = open(f.name, 'w')
 
 # Useful hack to force CPU inference
 #
@@ -245,8 +241,6 @@ warnings.filterwarnings('ignore', category=FutureWarning)
 
 import tensorflow as tf
 
-# print('TensorFlow version:', tf.__version__)
-# print('tf.test.is_gpu_available:', tf.test.is_gpu_available())
 
 
 #%% Support functions for multiprocessing
@@ -362,10 +356,6 @@ def load_and_run_detector_batch(model_file, image_file_names, destination_path,
         with open('progress.txt', 'w') as flasd:
             flasd.write(str(round(qre.format_dict['n']/qre.format_dict['total']*100))+'\n')
             flasd.write(str(round(qre.format_dict['elapsed'])))
-            # print("напечатал")
-            # print(round(qre.format_dict['n']/qre.format_dict['total']*100))
-            # print(round(qre.format_dict['elapsed']))
-            # sleep(60)
 
         count += 1
 
@@ -373,7 +363,6 @@ def load_and_run_detector_batch(model_file, image_file_names, destination_path,
         # print(result)
         source_path = os.path.abspath(im_file).replace('\\','/')
         if len(result['detections']):
-            # print(destination_path)
             for detection in result['detections']:
                 if detection['category'] == '1':
                     print(f"Перемещаем в хорошую {im_file}")
@@ -386,8 +375,6 @@ def load_and_run_detector_batch(model_file, image_file_names, destination_path,
         else:
             print(f"Перемещаем в плохую {im_file}")
             os.replace(source_path, destination_path + f'/bad/{os.path.basename(im_file)}')
-        # print(len(result['detections']))
-        # print(result['detections']['category'])
         
         
         
@@ -400,36 +387,6 @@ def load_and_run_detector_batch(model_file, image_file_names, destination_path,
 
     # results may have been modified in place, but we also return it for backwards-compatibility.
 
-
-
-def write_results_to_file(results, output_file, relative_path_base=None):
-    """Writes list of detection results to JSON output file. Format matches
-    https://github.com/microsoft/CameraTraps/tree/master/api/batch_processing#batch-processing-api-output-format
-
-    Args
-    - results: list of dict, each dict represents detections on one image
-    - output_file: str, path to JSON output file, should end in '.json'
-    - relative_path_base: str, path to a directory as the base for relative paths
-    """
-    if relative_path_base is not None:
-        results_relative = []
-        for r in results:
-            r_relative = copy.copy(r)
-            r_relative['file'] = os.path.relpath(r_relative['file'], start=relative_path_base)
-            results_relative.append(r_relative)
-        results = results_relative
-
-    final_output = {
-        'images': results,
-        'detection_categories': TFDetector.DEFAULT_DETECTOR_LABEL_MAP,
-        'info': {
-            'detection_completion_time': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-            'format_version': '1.0'
-        }
-    }
-    with open(output_file, 'w') as f:
-        json.dump(final_output, f, indent=1)
-    print('Output file saved at {}'.format(output_file))
 
 def create_directories(directory):
     if not os.path.exists(directory+"/good"):
@@ -515,32 +472,12 @@ def main():
     if os.path.isdir(args.image_file):
         image_file_names = ImagePathUtils.find_images(args.image_file, args.recursive)
         print('{} image files found in the input directory'.format(len(image_file_names)))
-    # A json list of image paths
-    elif os.path.isfile(args.image_file) and args.image_file.endswith('.json'):
-        with open(args.image_file) as f:
-            image_file_names = json.load(f)
-        print('{} image files found in the json list'.format(len(image_file_names)))
-    # A single image file
-    elif os.path.isfile(args.image_file) and ImagePathUtils.is_image_file(args.image_file):
-        image_file_names = [args.image_file]
-        print('A single image at {} is the input file'.format(args.image_file))
     else:
-        raise ValueError('image_file specified is not a directory, a json list, or an image file, '
-                         '(or does not have recognizable extensions).')
+        print("Ошибка, загружена не папка")
 
     assert len(image_file_names) > 0, 'Specified image_file does not point to valid image files'
     assert os.path.exists(image_file_names[0]), 'The first image to be scored does not exist at {}'.format(image_file_names[0])
 
-
-
-    # Test that we can write to the output_file's dir if checkpointing requested
-    # if args.checkpoint_frequency != -1:
-    #     checkpoint_path = os.path.join(output_dir, 'checkpoint_{}.json'.format(datetime.utcnow().strftime("%Y%m%d%H%M%S")))
-    #     with open(checkpoint_path, 'w') as f:
-    #         json.dump({'images': []}, f)
-    #     print('The checkpoint file will be written to {}'.format(checkpoint_path))
-    # else:
-    #     checkpoint_path = None
 
     start_time = time.time()
 
@@ -553,15 +490,6 @@ def main():
 
     elapsed = time.time() - start_time
     print('Finished inference in {}'.format(humanfriendly.format_timespan(elapsed)))
-
-    # relative_path_base = None
-    # if args.output_relative_filenames:
-    #     relative_path_base = args.image_file
-    # write_results_to_file(results, args.output_file, relative_path_base=relative_path_base)
-
-    # if checkpoint_path:
-    #     os.remove(checkpoint_path)
-    #     print('Deleted checkpoint file')
 
     print('Done!')
 
