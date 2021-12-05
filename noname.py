@@ -1,6 +1,5 @@
 #%% Constants, imports, environment
 
-from _typeshed import OpenTextModeReading
 import argparse
 import json
 import os
